@@ -8,6 +8,7 @@ import Register from './components/Register.jsx';
 import HeroSection from './components/HeroSection.jsx';
 import StudentDashboard from './components/Student/StudentDashboard.jsx';
 import HRDashboard from './components/Student/HRDashboard.jsx';
+import StudentLogin from './components/Student/StudentLogin.jsx';
 
 const appRouter = createBrowserRouter([
   {
@@ -33,7 +34,12 @@ const appRouter = createBrowserRouter([
       {
         path: "/HRDashboard",
         element: <HRDashboard />
+      },
+      {
+        path: "/StudentLogin",
+        element: <StudentLogin />
       }
+
     ]
   },
   
