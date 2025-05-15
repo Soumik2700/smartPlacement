@@ -51,7 +51,7 @@ const HRSummarySchema = new mongoose.Schema({
     shortlistedCount: Number,
     selectedCount: Number
 });
-
+   
 const HRSchema = new mongoose.Schema({
     name: String,
     email: String,
