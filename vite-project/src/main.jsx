@@ -9,6 +9,9 @@ import HeroSection from './components/HeroSection.jsx';
 import StudentDashboard from './components/Student/StudentDashboard.jsx';
 import HRDashboard from './components/Student/HRDashboard.jsx';
 import StudentLogin from './components/Student/StudentLogin.jsx';
+import HrLogin from './components/Student/HrLogin.jsx';
+import TpoLogin from './components/Student/TpoLogin.jsx';
+import AdminLogin from './components/Student/AdminLogin.jsx';
 
 const appRouter = createBrowserRouter([
   {
@@ -38,7 +41,20 @@ const appRouter = createBrowserRouter([
       {
         path: "/StudentLogin",
         element: <StudentLogin />
+      },
+      {
+        path: "/HrLogin",
+        element: <HrLogin />
+      },
+      {
+        path: "/TpoLogin",
+        element: <TpoLogin />
+      },
+      {
+        path: "/AdminLogin",
+        element: <AdminLogin />
       }
+
 
     ]
   },
