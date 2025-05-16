@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Input } from "./components/ui/input";
-import { Button } from "./components/ui/button";
-import { Card, CardContent } from "./components/ui/card";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
+import { Card, CardContent } from "../ui/card";
 import { motion } from "framer-motion";
 import { LogIn } from "lucide-react";
 

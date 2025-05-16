@@ -1,11 +1,11 @@
 import { Button } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion'; 
+import { motion } from 'framer-motion';
 
-const HeroSection =()=>{
+const HeroSection = () => {
 
     const navigate = useNavigate();
-    return(
+    return (
         <>
             <motion.section
                 className="text-center py-20 px-6"
@@ -21,7 +21,7 @@ const HeroSection =()=>{
                     <Button
                         variant="contained"
                         color="primary"
-                        onClick={() => navigate("/login/student")}
+                        onClick={() => navigate("/StudentLogin")}
                     >
                         Student Login
                     </Button>
