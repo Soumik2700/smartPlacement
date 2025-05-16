@@ -28,21 +28,21 @@ const HeroSection = () => {
                     <Button
                         variant="contained"
                         color="secondary"
-                        onClick={() => navigate("/login/hr")}
+                        onClick={() => navigate("/HrLogin")}
                     >
                         HR Login
                     </Button>
                     <Button
                         variant="contained"
                         color="primary"
-                        onClick={() => navigate("/login/tpo")}
+                        onClick={() => navigate("/TpoLogin")}
                     >
                         TPO Login
                     </Button>
                     <Button
                         variant="contained"
                         color="error"
-                        onClick={() => navigate("/login/admin")}
+                        onClick={() => navigate("/AdminLogin")}
                     >
                         Admin Login
                     </Button>
