@@ -12,6 +12,7 @@ import StudentLogin from './components/Student/StudentLogin.jsx';
 import HrLogin from './components/Student/HrLogin.jsx';
 import TpoLogin from './components/Student/TpoLogin.jsx';
 import AdminLogin from './components/Student/AdminLogin.jsx';
+import AdminDashboard from './components/Student/AdminDashboard.jsx';
 
 const appRouter = createBrowserRouter([
   {
@@ -53,6 +54,10 @@ const appRouter = createBrowserRouter([
       {
         path: "/AdminLogin",
         element: <AdminLogin />
+      },
+      {
+      path: "/adminDashboard",
+      element: <AdminDashboard />
       }
 
 
