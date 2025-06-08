@@ -2,7 +2,11 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
-import {createBrowserRouter, RouterProvider} from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext.jsx';
+import ProtectedRoute from './components/ProtectedRoutes.jsx';
+
+// Components
 import LandingPage from './components/LandingPage.jsx';
 import Register from './components/Register.jsx';
 import HeroSection from './components/HeroSection.jsx';
@@ -16,12 +20,12 @@ import AdminDashboard from './components/Student/AdminDashboard.jsx';
 
 const appRouter = createBrowserRouter([
   {
-    path:"/",
+    path: "/",
     element: <LandingPage />,
-    children:[
+    children: [
       {
-        path:"",
-        element:<HeroSection/>
+        path: "",
+        element: <HeroSection />
       },
       {
         path: "/register",
@@ -31,14 +35,32 @@ const appRouter = createBrowserRouter([
         path: "/login",
         element: <Register />
       },
+      // Protected Routes
       {
-        path:"/studentDashboard",
-        element:<StudentDashboard/>
+        path: "/studentDashboard/:id",
+        element: (
+          <ProtectedRoute requiredRole="student">
+            <StudentDashboard />
+          </ProtectedRoute>
+        )
       },
       {
         path: "/HRDashboard",
-        element: <HRDashboard />
+        element: (
+          <ProtectedRoute requiredRole="hr">
+            <HRDashboard />
+          </ProtectedRoute>
+        )
       },
+      {
+        path: "/adminDashboard",
+        element: (
+          <ProtectedRoute requiredRole="admin">
+            <AdminDashboard />
+          </ProtectedRoute>
+        )
+      },
+      // Login Routes (Public)
       {
         path: "/StudentLogin",
         element: <StudentLogin />
@@ -54,20 +76,15 @@ const appRouter = createBrowserRouter([
       {
         path: "/AdminLogin",
         element: <AdminLogin />
-      },
-      {
-      path: "/adminDashboard",
-      element: <AdminDashboard />
       }
-
-
     ]
   },
-  
 ])
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <RouterProvider router={appRouter}/>
+    <AuthProvider>
+      <RouterProvider router={appRouter} />
+    </AuthProvider>
   </StrictMode>,
 )
