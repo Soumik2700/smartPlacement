@@ -29,6 +29,7 @@ import {
     uploadDocument,
     getAllStudents
 } from '../controller/student.controller.js';
+import { loginHR, registerHR } from "../controller/hr.controller.js";
 
 const app = express();
 
@@ -92,4 +93,9 @@ export function studentRoutes(app) {
     app.post('/students/certifications', addCertification);
     app.post('/students/documents', uploadDocument);
     app.get('/students/all', getAllStudents);
+}
+
+export function hrRoutes(app) {
+    app.post('/hr/register', registerHR);
+    app.post("/hr/login", loginHR)
 }

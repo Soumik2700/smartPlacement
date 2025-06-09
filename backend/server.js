@@ -2,7 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
-import{collageRoutes, studentRoutes} from './routes/router.js';
+import{collageRoutes, hrRoutes, studentRoutes} from './routes/router.js';
 
 dotenv.config();
 
@@ -40,6 +40,7 @@ app.use((err, req, res, next) => {
 // Routes
 collageRoutes(app);
 studentRoutes(app);
+hrRoutes(app);
 
 // Start server
 app.listen(5100, () => {

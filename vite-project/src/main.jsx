@@ -17,6 +17,7 @@ import HrLogin from './components/Student/HrLogin.jsx';
 import TpoLogin from './components/Student/TpoLogin.jsx';
 import AdminLogin from './components/Student/AdminLogin.jsx';
 import AdminDashboard from './components/Student/AdminDashboard.jsx';
+import TPODashboard from './components/TPO/TPODashboard.jsx';
 
 const appRouter = createBrowserRouter([
   {
@@ -51,6 +52,10 @@ const appRouter = createBrowserRouter([
             <HRDashboard />
           </ProtectedRoute>
         )
+      },
+      {
+        path: "/TPODashboard",
+        element: <TPODashboard />
       },
       {
         path: "/adminDashboard",
