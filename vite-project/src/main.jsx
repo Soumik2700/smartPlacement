@@ -60,9 +60,9 @@ const appRouter = createBrowserRouter([
       {
         path: "/adminDashboard",
         element: (
-          <ProtectedRoute requiredRole="admin">
+          // <ProtectedRoute requiredRole="admin">
             <AdminDashboard />
-          </ProtectedRoute>
+          // </ProtectedRoute>
         )
       },
       // Login Routes (Public)
