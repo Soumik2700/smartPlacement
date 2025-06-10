@@ -3,7 +3,6 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoutes.jsx';
 
 // Components
@@ -55,7 +54,11 @@ const appRouter = createBrowserRouter([
       },
       {
         path: "/TPODashboard",
-        element: <TPODashboard />
+        element: (
+          <ProtectedRoute requiredRole="tpo">
+            <TPODashboard />
+          </ProtectedRoute>
+        )
       },
       {
         path: "/adminDashboard",
@@ -88,8 +91,6 @@ const appRouter = createBrowserRouter([
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AuthProvider>
-      <RouterProvider router={appRouter} />
-    </AuthProvider>
+    <RouterProvider router={appRouter} />
   </StrictMode>,
 )

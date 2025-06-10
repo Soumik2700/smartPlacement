@@ -29,7 +29,16 @@ import {
     uploadDocument,
     getAllStudents
 } from '../controller/student.controller.js';
+
 import { loginHR, registerHR } from "../controller/hr.controller.js";
+
+// Import TPO controller functions
+import {
+    registerTPO,
+    loginTPO,
+    getTPOProfile,
+    getAllTPOs
+} from '../controller/TPO.controller.js';
 
 const app = express();
 
@@ -95,7 +104,30 @@ export function studentRoutes(app) {
     app.get('/students/all', getAllStudents);
 }
 
+// ==================== HR ROUTES ====================
 export function hrRoutes(app) {
     app.post('/hr/register', registerHR);
-    app.post("/hr/login", loginHR)
+    app.post("/hr/login", loginHR);
+}
+
+// ==================== TPO ROUTES ====================
+export function tpoRoutes(app) {
+    // Public routes
+    app.post('/tpo/login', loginTPO);
+
+    // Admin-only routes (for TPO registration)
+    app.post('/tpo/register', registerTPO); // This should be protected by admin middleware
+
+    // Protected routes (require TPO authentication)
+    app.get('/tpo/profile', getTPOProfile); // This should be protected by auth middleware
+
+    // Admin routes for TPO management
+    app.get('/tpo/all', getAllTPOs); // This should be protected by admin middleware
+
+    // Additional TPO routes can be added here
+    // app.put('/tpo/profile', updateTPOProfile);
+    // app.put('/tpo/password', changeTPOPassword);
+    // app.put('/tpo/permissions/:id', updateTPOPermissions); // Admin only
+    // app.put('/tpo/status/:id', toggleTPOStatus); // Admin only
+    // app.delete('/tpo/:id', deleteTPO); // Admin only
 }

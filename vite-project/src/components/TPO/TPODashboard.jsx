@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from "react";
+import {useNavigate} from "react-router-dom";
 // No axios needed for this local mock data version, but keeping for potential future API integration.
 // import axios from "axios"; 
 
 const TPODashboard = () => {
   // Common Tailwind CSS classes for consistent styling
+
+  const navigate = useNavigate();
+
   const cardBaseClass = "bg-white p-6 sm:p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-200";
   const sectionTitleClass = "text-2xl font-bold text-gray-800 mb-4";
   const inputClass = "w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200";
@@ -855,6 +859,13 @@ const TPODashboard = () => {
     }
   };
 
+  const handelLogout=()=>{
+    localStorage.removeItem("tpoData");
+    localStorage.removeItem("tpoToken");
+
+    navigate('/TpoLogin');
+  }
+
   const menuItems = [
     { id: 'overview', name: 'Dashboard Overview', icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-9v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg> },
     { id: 'profile', name: 'My Profile', icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg> },
@@ -910,7 +921,7 @@ const TPODashboard = () => {
                 {menuItems.find(item => item.id === activeSection)?.name}
               </h1>
               <button
-                onClick={() => console.log("Logout TPO")} // Implement actual logout logic here
+                onClick={handelLogout} // Implement actual logout logic here
                 className="flex items-center px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors duration-300"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

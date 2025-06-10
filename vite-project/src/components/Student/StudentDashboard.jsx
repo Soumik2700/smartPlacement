@@ -101,8 +101,8 @@ const StudentDashboard = () => {
 
     // Function to handle logout
     const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+        localStorage.removeItem("studentToken");
+        localStorage.removeItem("studentData");
         console.log("User logged out!");
         navigate("/StudentLogin"); // Redirect to login page after logout
     };
