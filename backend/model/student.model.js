@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const studentSchema = new mongoose.Schema({
     name: { type: String, required: true },
@@ -7,10 +7,13 @@ const studentSchema = new mongoose.Schema({
     password: { type: String, required: true }, // hashed password
 
     college: {
-        name: String,
+        collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'College'},
+        name: String, // Stored for quick access
+        code: String, // College code
         course: String,
         branch: String,
-        registrationId: String,
+        registrationId: { type: String, required: true },
+        passingYear: Number
     },
 
     resume: { type: String }, // resume file URL
@@ -68,4 +71,7 @@ const studentSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-module.exports = mongoose.model('Student', studentSchema);
+// Index for faster queries
+studentSchema.index({ 'college.registrationId': 1, 'college.collegeId': 1 }, { unique: true });
+
+export default mongoose.model('Student', studentSchema);
