@@ -30,7 +30,7 @@ import {
     getAllStudents
 } from '../controller/student.controller.js';
 
-import { loginHR, registerHR } from "../controller/hr.controller.js";
+import { createJobPost, getAllHRs, getHRDetails, getJobPostsByHR, loginHR, registerHR, updateJobPostApproval } from "../controller/hr.controller.js";
 
 // Import TPO controller functions
 import {
@@ -108,6 +108,11 @@ export function studentRoutes(app) {
 export function hrRoutes(app) {
     app.post('/hr/register', registerHR);
     app.post("/hr/login", loginHR);
+    app.post('/hr/job-post/:id', createJobPost)
+    app.get('/hr/job-posts/:id', getJobPostsByHR)
+    app.get('/hr/profile/:id', getHRDetails)
+    app.get('/hr/all', getAllHRs);
+    app.put('/hr/:hrId/job-post/:jobPostId/approval', updateJobPostApproval)
 }
 
 // ==================== TPO ROUTES ====================

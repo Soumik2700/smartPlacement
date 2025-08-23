@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from "react";
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import RenderOverview from "./RenderOverview";
+import RenderProfile from "./RenderProfile";
+import RenderStudentManagement from "./RenderStudentManagement";
+import RenderCompanyHrManagement from "./RenderCompanyHrManagement";
 // No axios needed for this local mock data version, but keeping for potential future API integration.
 // import axios from "axios"; 
 
@@ -108,19 +113,476 @@ const TPODashboard = () => {
   });
 
   const [activeSection, setActiveSection] = useState('overview'); // State to manage active dashboard section
+  const [realHRs, setRealHRs] = useState([]);
+  const [loadingHRs, setLoadingHRs] = useState(false);
 
-  // Utility function for consistent table headers
+  //Hr details
+  const [selectedHRDetails, setSelectedHRDetails] = useState(null);
+  const [showHRDetailModal, setShowHRDetailModal] = useState(false);
+  const [loadingHRDetails, setLoadingHRDetails] = useState(false);
+
+  //Job Approval
+  const [showJobApprovalModal, setShowJobApprovalModal] = useState(false);
+  const [selectedHRForApproval, setSelectedHRForApproval] = useState(null);
+  const [jobsForApproval, setJobsForApproval] = useState([]);
+  const [loadingJobApproval, setLoadingJobApproval] = useState(false);
+  const [selectedJobsForApproval, setSelectedJobsForApproval] = useState([]);
+  const [approvingJobs, setApprovingJobs] = useState(false);
+
+  const fetchJobsForApproval = async (hrId) => {
+    setLoadingJobApproval(true);
+    try {
+      const response = await axios.get(`http://localhost:5100/hr/profile/${hrId}`);
+      if (response.data.success) {
+        const pendingJobs = response.data.data.jobPosts.filter(job => !job.hasApproved);
+        setJobsForApproval(pendingJobs);
+        setSelectedHRForApproval(response.data.data);
+        setShowJobApprovalModal(true);
+      }
+    } catch (error) {
+      console.error('Error fetching jobs for approval:', error);
+    } finally {
+      setLoadingJobApproval(false);
+    }
+  };
+
+  // Add this function to handle approve jobs button click
+  const handleApproveJobs = (hrId) => {
+    fetchJobsForApproval(hrId);
+  };
+
+  // Add this function to handle individual job approval
+  const handleIndividualJobApproval = async (hrId, jobId, hasApproved) => {
+    try {
+      const response = await axios.put(`http://localhost:5100/hr/${hrId}/job-post/${jobId}/approval`, {
+        hasApproved: hasApproved
+      });
+
+      if (response.data.success) {
+        // Update the jobs list
+        setJobsForApproval(prev =>
+          prev.map(job =>
+            job._id === jobId ? { ...job, hasApproved: hasApproved } : job
+          )
+        );
+        // Refresh the HR list
+        fetchHRsFromAPI();
+      }
+    } catch (error) {
+      console.error('Error updating job approval:', error);
+    }
+  };
+
+  // Add this function to handle bulk approval
+  const handleBulkApproval = async () => {
+    if (selectedJobsForApproval.length === 0) return;
+
+    setApprovingJobs(true);
+    try {
+      const promises = selectedJobsForApproval.map(jobId =>
+        axios.put(`http://localhost:5100/hr/${selectedHRForApproval._id}/job-post/${jobId}/approval`, {
+          hasApproved: true
+        })
+      );
+
+      await Promise.all(promises);
+
+      // Update the jobs list
+      setJobsForApproval(prev =>
+        prev.map(job =>
+          selectedJobsForApproval.includes(job._id) ? { ...job, hasApproved: true } : job
+        )
+      );
+
+      // Clear selections
+      setSelectedJobsForApproval([]);
+
+      // Refresh the HR list
+      fetchHRsFromAPI();
+    } catch (error) {
+      console.error('Error bulk approving jobs:', error);
+    } finally {
+      setApprovingJobs(false);
+    }
+  };
+
+  // Add this function to handle job selection for bulk approval
+  const handleJobSelection = (jobId) => {
+    setSelectedJobsForApproval(prev =>
+      prev.includes(jobId)
+        ? prev.filter(id => id !== jobId)
+        : [...prev, jobId]
+    );
+  };
+
+  // Add this modal component for job approval
+  const renderJobApprovalModal = () => {
+    if (!showJobApprovalModal || !selectedHRForApproval) return null;
+
+    const pendingJobs = jobsForApproval.filter(job => !job.hasApproved);
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+          {/* Modal Header */}
+          <div className="flex justify-between items-center p-6 border-b border-gray-200">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800">Job Approval</h2>
+              <p className="text-gray-600">{selectedHRForApproval.hrProfile.companyName} - {selectedHRForApproval.hrProfile.name}</p>
+            </div>
+            <button
+              onClick={() => {
+                setShowJobApprovalModal(false);
+                setSelectedJobsForApproval([]);
+              }}
+              className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Modal Content */}
+          <div className="p-6">
+            {loadingJobApproval ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                <span className="ml-2 text-gray-600">Loading jobs...</span>
+              </div>
+            ) : (
+              <>
+                {/* Bulk Actions */}
+                {pendingJobs.length > 0 && (
+                  <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="font-semibold text-gray-800">Bulk Actions</h3>
+                        <p className="text-sm text-gray-600">
+                          {selectedJobsForApproval.length} of {pendingJobs.length} jobs selected
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setSelectedJobsForApproval(pendingJobs.map(job => job._id))}
+                          className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                        >
+                          Select All
+                        </button>
+                        <button
+                          onClick={() => setSelectedJobsForApproval([])}
+                          className="px-3 py-1 bg-gray-500 text-white rounded text-sm hover:bg-gray-600"
+                        >
+                          Clear All
+                        </button>
+                        <button
+                          onClick={handleBulkApproval}
+                          disabled={selectedJobsForApproval.length === 0 || approvingJobs}
+                          className={`px-4 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600 
+                            ${(selectedJobsForApproval.length === 0 || approvingJobs) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          {approvingJobs ? 'Approving...' : `Approve Selected (${selectedJobsForApproval.length})`}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Jobs List */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    Pending Jobs for Approval ({pendingJobs.length})
+                  </h3>
+
+                  {pendingJobs.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-600">No pending jobs for approval</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {pendingJobs.map((job) => (
+                        <div key={job._id} className="border border-gray-200 p-4 rounded-lg bg-white">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center">
+                              <input
+                                type="checkbox"
+                                checked={selectedJobsForApproval.includes(job._id)}
+                                onChange={() => handleJobSelection(job._id)}
+                                className="mr-3 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                              />
+                              <div>
+                                <h4 className="font-semibold text-gray-800">{job.role}</h4>
+                                <p className="text-sm text-gray-600">
+                                  <span className="font-medium">CTC:</span> {job.ctc} |
+                                  <span className="font-medium"> Location:</span> {job.location}
+                                </p>
+                              </div>
+                            </div>
+                            <span className={`text-xs font-semibold px-2 py-1 rounded-full
+                              ${job.status === 'Active' ? 'bg-green-200 text-green-800' :
+                                job.status === 'Draft' ? 'bg-yellow-200 text-yellow-800' :
+                                  'bg-red-200 text-red-800'}
+                            `}>
+                              {job.status}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                            <div>
+                              <p className="text-sm text-gray-600">
+                                <span className="font-medium">Skills:</span> {job.requiredSkills.join(', ')}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                <span className="font-medium">Eligibility:</span>
+                                Year: {job.eligibilityCriteria.passingYear} |
+                                Branches: {job.eligibilityCriteria.branch?.join(', ') || 'N/A'}
+                              </p>
+                            </div>
+                            <div>
+                              {job.applicationDeadline && (
+                                <p className="text-sm text-gray-600">
+                                  <span className="font-medium">Deadline:</span> {new Date(job.applicationDeadline).toLocaleDateString()}
+                                </p>
+                              )}
+                              <p className="text-sm text-gray-600">
+                                <span className="font-medium">Applicants:</span> {job.applicants?.length || 0}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Individual Job Actions */}
+                          <div className="flex gap-2 pt-3 border-t border-gray-100">
+                            <button
+                              onClick={() => handleIndividualJobApproval(selectedHRForApproval._id, job._id, true)}
+                              className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600 transition-colors"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleIndividualJobApproval(selectedHRForApproval._id, job._id, false)}
+                              className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition-colors"
+                            >
+                              Reject
+                            </button>
+                            <button
+                              onClick={() => console.log('Request changes for job:', job._id)}
+                              className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 transition-colors"
+                            >
+                              Request Changes
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Modal Footer */}
+          <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
+            <button
+              onClick={() => {
+                setShowJobApprovalModal(false);
+                setSelectedJobsForApproval([]);
+              }}
+              className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Add this function to fetch HR details
+  const fetchHRDetails = async (hrId) => {
+    setLoadingHRDetails(true);
+    try {
+      const response = await axios.get(`http://localhost:5100/hr/profile/${hrId}`);
+      if (response.data.success) {
+        setSelectedHRDetails(response.data.data);
+        setShowHRDetailModal(true);
+      }
+    } catch (error) {
+      console.error('Error fetching HR details:', error);
+    } finally {
+      setLoadingHRDetails(false);
+    }
+  };
+
+  // Add this function to handle view button click
+  const handleViewHR = (hrId) => {
+    fetchHRDetails(hrId);
+  };
+
+  // Add this modal component for HR details
+  const renderHRDetailModal = () => {
+    if (!showHRDetailModal || !selectedHRDetails) return null;
+
+    const { hrProfile, summary, jobPosts } = selectedHRDetails;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          {/* Modal Header */}
+          <div className="flex justify-between items-center p-6 border-b border-gray-200">
+            <h2 className="text-2xl font-bold text-gray-800">HR Profile Details</h2>
+            <button
+              onClick={() => setShowHRDetailModal(false)}
+              className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Modal Content */}
+          <div className="p-6 space-y-6">
+            {/* HR Profile Section */}
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <div className="flex items-center mb-4">
+                <img
+                  src={hrProfile.companyLogo || "https://placehold.co/80x80/6D28D9/FFFFFF?text=CO"}
+                  alt="Company Logo"
+                  className="w-20 h-20 rounded-full object-cover border-2 border-indigo-300 mr-4"
+                />
+                <div>
+                  <h3 className="text-xl font-bold text-gray-800">{hrProfile.companyName}</h3>
+                  <p className="text-lg text-gray-700">{hrProfile.name}</p>
+                  <p className="text-sm text-gray-600">{hrProfile.designation}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600"><span className="font-medium">Email:</span> {hrProfile.email}</p>
+                  <p className="text-sm text-gray-600"><span className="font-medium">Contact:</span> {hrProfile.contactNumber}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Summary Statistics */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-4 bg-blue-100 rounded-lg">
+                <div className="text-2xl font-bold text-blue-700">{summary.totalJobs}</div>
+                <p className="text-sm text-gray-600">Total Jobs</p>
+              </div>
+              <div className="text-center p-4 bg-green-100 rounded-lg">
+                <div className="text-2xl font-bold text-green-700">{summary.totalApplicants}</div>
+                <p className="text-sm text-gray-600">Total Applicants</p>
+              </div>
+              <div className="text-center p-4 bg-yellow-100 rounded-lg">
+                <div className="text-2xl font-bold text-yellow-700">{summary.shortlistedCount}</div>
+                <p className="text-sm text-gray-600">Shortlisted</p>
+              </div>
+              <div className="text-center p-4 bg-purple-100 rounded-lg">
+                <div className="text-2xl font-bold text-purple-700">{summary.selectedCount}</div>
+                <p className="text-sm text-gray-600">Selected</p>
+              </div>
+            </div>
+
+            {/* Job Posts Section */}
+            <div>
+              <h4 className="text-lg font-semibold text-gray-800 mb-4">Job Posts ({jobPosts.length})</h4>
+              <div className="space-y-4 max-h-64 overflow-y-auto">
+                {jobPosts.map((job) => (
+                  <div key={job._id} className="border border-gray-200 p-4 rounded-lg bg-white">
+                    <div className="flex justify-between items-start mb-2">
+                      <h5 className="font-semibold text-gray-800">{job.role}</h5>
+                      <div className="flex gap-2">
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-full
+                        ${job.status === 'Active' ? 'bg-green-200 text-green-800' :
+                            job.status === 'Draft' ? 'bg-yellow-200 text-yellow-800' :
+                              'bg-red-200 text-red-800'}
+                      `}>
+                          {job.status}
+                        </span>
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-full
+                        ${job.hasApproved ? 'bg-blue-200 text-blue-800' : 'bg-gray-200 text-gray-800'}
+                      `}>
+                          {job.hasApproved ? 'Approved' : 'Pending'}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-1">
+                      <span className="font-medium">Skills:</span> {job.requiredSkills.join(', ')}
+                    </p>
+                    <p className="text-sm text-gray-600 mb-1">
+                      <span className="font-medium">CTC:</span> {job.ctc} |
+                      <span className="font-medium"> Location:</span> {job.location}
+                    </p>
+                    <p className="text-sm text-gray-600 mb-1">
+                      <span className="font-medium">Eligibility:</span>
+                      Year: {job.eligibilityCriteria.passingYear} |
+                      Branches: {job.eligibilityCriteria.branch?.join(', ') || 'N/A'}
+                    </p>
+                    {job.applicationDeadline && (
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">Deadline:</span> {new Date(job.applicationDeadline).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Modal Footer */}
+          <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
+            <button
+              onClick={() => setShowHRDetailModal(false)}
+              className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              Close
+            </button>
+            <button
+              onClick={() => console.log('Approve all jobs for HR:', selectedHRDetails._id)}
+              className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+            >
+              Approve All Jobs
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  // --- Section Render Functions ---
+
+  const fetchHRsFromAPI = async () => {
+    setLoadingHRs(true);
+    try {
+      const response = await fetch('http://localhost:5100/hr/all');
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setRealHRs(result.data.hrs || []);
+      } else {
+        console.error('Failed to fetch HRs:', result.message);
+      }
+    } catch (error) {
+      console.error('Error fetching HRs:', error);
+    } finally {
+      setLoadingHRs(false);
+    }
+  };
+
+  // Add useEffect to fetch HRs when section changes
+  useEffect(() => {
+    if (activeSection === 'company-hr-management') {
+      fetchHRsFromAPI();
+    }
+  }, [activeSection]);
+
   const renderTableHeader = (headers) => (
     <thead>
-      <tr className="bg-indigo-600 text-white text-left">
-        {headers.map((header, index) => (
-          <th key={index} className="px-4 py-3 font-semibold text-lg">{header}</th>
-        ))}
-      </tr>
+        <tr className="bg-indigo-600 text-white text-left">
+            {headers.map((header, index) => (
+                <th key={index} className="px-4 py-3 font-semibold text-lg">{header}</th>
+            ))}
+        </tr>
     </thead>
-  );
+);
 
-  // Helper function to render action buttons
   const renderActionButton = (text, onClick, colorClass, iconPath = null) => (
     <button onClick={onClick} className={`${colorClass} px-3 py-1 rounded-full text-xs hover:scale-105 transition-transform duration-200 flex items-center gap-1`}>
       {iconPath && <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">{iconPath}</svg>}
@@ -128,225 +590,7 @@ const TPODashboard = () => {
     </button>
   );
 
-  // --- Section Render Functions ---
-
-  // 1. Welcome / Profile Section
-  const renderProfileSection = () => (
-    <div className={`${cardBaseClass} col-span-full md:col-span-2 lg:col-span-1`}>
-      <div className="flex flex-col items-center text-center mb-6">
-        <img
-          src={tpoData.profile.photo}
-          alt="TPO Profile"
-          className="w-32 h-32 rounded-full object-cover border-4 border-indigo-500 shadow-md mb-4"
-        />
-        <h2 className="text-3xl font-extrabold text-indigo-800 mb-2">{tpoData.profile.name}</h2>
-        <p className="text-lg text-gray-700">{tpoData.profile.designation}</p>
-        <p className="text-md text-gray-600">{tpoData.profile.department} at {tpoData.profile.collegeName}</p>
-      </div>
-      <div className="text-center space-y-2 text-gray-700 mb-6">
-        <p><span className="font-semibold">Email:</span> {tpoData.profile.email}</p>
-        <p><span className="font-semibold">Phone:</span> {tpoData.profile.phone}</p>
-      </div>
-      <div className="flex flex-wrap justify-center gap-3">
-        <button className={primaryButtonClass}>
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" /></svg>
-          Edit Profile
-        </button>
-        <button className={secondaryButtonClass}>
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2h2a2 2 0 012 2v5a2 2 0 01-2 2H3a2 2 0 01-2-2v-5a2 2 0 012-2h2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
-          Change Password
-        </button>
-      </div>
-    </div>
-  );
-
-  // Overview / Analytics Section
-  const renderOverview = () => (
-    <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-blue-100 p-6 rounded-lg text-center shadow-md">
-          <h3 className="text-4xl font-extrabold text-blue-700">{tpoData.analytics.totalStudents}</h3>
-          <p className="text-gray-700 text-lg">Total Students</p>
-        </div>
-        <div className="bg-green-100 p-6 rounded-lg text-center shadow-md">
-          <h3 className="text-4xl font-extrabold text-green-700">{tpoData.analytics.placedStudents}</h3>
-          <p className="text-gray-700 text-lg">Students Placed</p>
-        </div>
-        <div className="bg-purple-100 p-6 rounded-lg text-center shadow-md">
-          <h3 className="text-4xl font-extrabold text-purple-700">{tpoData.analytics.activeJobs}</h3>
-          <p className="text-gray-700 text-lg">Active Jobs</p>
-        </div>
-        <div className="bg-orange-100 p-6 rounded-lg text-center shadow-md">
-          <h3 className="text-4xl font-extrabold text-orange-700">{tpoData.analytics.placementPercentage}%</h3>
-          <p className="text-gray-700 text-lg">Placement Rate</p>
-        </div>
-      </div>
-      <section className={`${cardBaseClass} mb-8`}>
-        <h2 className={sectionTitleClass}>Placement Trend (Mock Graph)</h2>
-        <div className="h-64 bg-gray-100 rounded-lg flex items-end justify-around p-4">
-          {tpoData.analytics.placementGraphData.map((data, index) => (
-            <div key={index} className="flex flex-col items-center" style={{ height: `${data.placed / 100 * 90}%` }}>
-              <span className="text-sm font-semibold text-indigo-700 mb-1">{data.placed}</span>
-              <div className="w-10 bg-indigo-500 rounded-t-lg" style={{ height: `${data.placed / 100 * 100}%` }}></div>
-              <span className="text-sm text-gray-600 mt-2">{data.year}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-      <section className={`${cardBaseClass} mb-8`}>
-        <h2 className={sectionTitleClass}>Department-wise Placement</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {Object.entries(tpoData.analytics.departmentWisePlacement).map(([dept, count]) => (
-            <div key={dept} className="bg-gray-100 p-4 rounded-lg flex items-center justify-between shadow-sm">
-              <span className="text-lg font-medium text-gray-700">{dept}</span>
-              <span className="text-xl font-bold text-indigo-600">{count}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-      <section className={`${cardBaseClass} mb-8`}>
-        <h2 className={sectionTitleClass}>Shortlisting & Selection Ratio</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {Object.entries(tpoData.analytics.selectionRatio).map(([label, ratio]) => (
-            <div key={label} className="bg-gray-100 p-4 rounded-lg flex flex-col items-center justify-center shadow-sm">
-              <span className="text-lg font-medium text-gray-700 text-center mb-1">{label}</span>
-              <span className="text-2xl font-bold text-teal-600">{ratio}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-    </>
-  );
-
-  // 2. Student Management
-  const renderStudentManagement = () => (
-    <div className={cardBaseClass}>
-      <h2 className={sectionTitleClass}>Student Management</h2>
-      <div className="mb-6 flex flex-wrap items-center gap-4">
-        <select className={inputClass + " w-auto flex-grow"}>
-          <option>All Departments</option>
-          {Array.from(new Set(tpoData.students.map(s => s.department))).map(dept => <option key={dept}>{dept}</option>)}
-        </select>
-        <select className={inputClass + " w-auto flex-grow"}>
-          <option>All Years</option>
-          {Array.from(new Set(tpoData.students.map(s => s.year))).map(year => <option key={year}>{year}</option>)}
-        </select>
-        <select className={inputClass + " w-auto flex-grow"}>
-          <option>All Status</option>
-          <option>Placed</option>
-          <option>Applied</option>
-          <option>Shortlisted</option>
-          <option>Not Applied</option>
-        </select>
-        <button className={primaryButtonClass + " w-auto"}>
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" /></svg>
-          View / Edit Profiles
-        </button>
-        <label className={secondaryButtonClass + " w-auto cursor-pointer"}>
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.414L16.586 7A2 2 0 0117 8.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" /><path fillRule="evenodd" d="M8 8H6v7a1 1 0 001 1h6a1 1 0 001-1V8h-2V7a1 1 0 00-1-1H9a1 1 0 00-1 1v1z" clipRule="evenodd" /></svg>
-          Bulk Upload CSV
-          <input type="file" className="hidden" accept=".csv" />
-        </label>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse border border-gray-300 rounded-lg overflow-hidden">
-          {renderTableHeader(["Name", "Department", "Year", "CGPA", "Status", "Active", "Actions"])}
-          <tbody>
-            {tpoData.students.map((student) => (
-              <tr key={student.id} className="hover:bg-gray-50 transition-colors">
-                <td className="border border-gray-200 px-4 py-3 text-gray-800">{student.name}</td>
-                <td className="border border-gray-200 px-4 py-3 text-gray-700">{student.department}</td>
-                <td className="border border-gray-200 px-4 py-3 text-gray-700">{student.year}</td>
-                <td className="border border-gray-200 px-4 py-3 text-gray-700">{student.cgpa}</td>
-                <td className="border border-gray-200 px-4 py-3">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    student.placementStatus === 'Placed' ? 'bg-green-100 text-green-800' :
-                    student.placementStatus === 'Shortlisted' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-blue-100 text-blue-800'
-                  }`}>
-                    {student.placementStatus}
-                  </span>
-                </td>
-                <td className="border border-gray-200 px-4 py-3 text-center">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    student.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {student.isActive ? 'Yes' : 'No'}
-                  </span>
-                </td>
-                <td className="border border-gray-200 px-4 py-3">
-                  <div className="flex flex-wrap gap-2">
-                    {renderActionButton("View", () => console.log(`View student ${student.name}`), "bg-blue-500 text-white")}
-                    {renderActionButton("Edit", () => console.log(`Edit student ${student.name}`), "bg-indigo-500 text-white")}
-                    {student.isActive ? (
-                      renderActionButton("Deactivate", () => console.log(`Deactivate student ${student.name}`), "bg-red-500 text-white")
-                    ) : (
-                      renderActionButton("Activate", () => console.log(`Activate student ${student.name}`), "bg-green-500 text-white")
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-
   // 3. Company & HR Management
-  const renderCompanyHRManagement = () => (
-    <div className={cardBaseClass}>
-      <h2 className={sectionTitleClass}>Company & HR Management</h2>
-      <div className="mb-6">
-        <h3 className="font-semibold text-lg text-gray-700 mb-3">Company Accounts:</h3>
-        <div className="overflow-x-auto mb-6">
-          <table className="w-full border-collapse border border-gray-300 rounded-lg overflow-hidden">
-            {renderTableHeader(["Company Name", "HR Name", "Status", "Jobs Posted", "Students Hired", "Active", "Actions"])}
-            <tbody>
-              {tpoData.companies.map((company) => (
-                <tr key={company.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="border border-gray-200 px-4 py-3 text-gray-800">{company.name}</td>
-                  <td className="border border-gray-200 px-4 py-3 text-gray-700">{company.hrName}</td>
-                  <td className="border border-gray-200 px-4 py-3">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      company.status === 'Approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {company.status}
-                    </span>
-                  </td>
-                  <td className="border border-gray-200 px-4 py-3 text-gray-700">{company.jobsPosted}</td>
-                  <td className="border border-gray-200 px-4 py-3 text-gray-700">{company.studentsHired}</td>
-                  <td className="border border-gray-200 px-4 py-3 text-center">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      company.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {company.isActive ? 'Yes' : 'No'}
-                    </span>
-                  </td>
-                  <td className="border border-gray-200 px-4 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      {company.status === 'Pending' && (
-                        renderActionButton("Approve", () => console.log(`Approve company ${company.name}`), "bg-green-600 text-white")
-                      )}
-                      {renderActionButton("View", () => console.log(`View company ${company.name}`), "bg-blue-500 text-white")}
-                      {company.isActive ? (
-                        renderActionButton("Block", () => console.log(`Block company ${company.name}`), "bg-red-500 text-white")
-                      ) : (
-                        renderActionButton("Unblock", () => console.log(`Unblock company ${company.name}`), "bg-green-500 text-white")
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <h3 className="font-semibold text-lg text-gray-700 mb-3">HR Accounts (Mock - assuming linked to companies):</h3>
-        {/* Placeholder for HRs, typically managed via company object or separate table */}
-        <p className="text-gray-600 italic">HR accounts are typically managed through their respective company profiles. New HR accounts linked to a company are approved via company approval.</p>
-      </div>
-    </div>
-  );
 
   // 4. Job Postings Overview
   const renderJobPostings = () => (
@@ -376,9 +620,8 @@ const TPODashboard = () => {
                 <td className="border border-gray-200 px-4 py-3 text-gray-800">{job.role}</td>
                 <td className="border border-gray-200 px-4 py-3 text-gray-700">{job.company}</td>
                 <td className="border border-gray-200 px-4 py-3">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    job.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${job.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
                     {job.status}
                   </span>
                 </td>
@@ -444,12 +687,11 @@ const TPODashboard = () => {
                 <td className="border border-gray-200 px-4 py-3 text-gray-700">{app.company}</td>
                 <td className="border border-gray-200 px-4 py-3 text-gray-700">{app.role}</td>
                 <td className="border border-gray-200 px-4 py-3">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    app.status === 'Placed' ? 'bg-green-100 text-green-800' :
-                    app.status === 'Shortlisted' ? 'bg-yellow-100 text-yellow-800' :
-                    app.status === 'Applied' ? 'bg-blue-100 text-blue-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${app.status === 'Placed' ? 'bg-green-100 text-green-800' :
+                      app.status === 'Shortlisted' ? 'bg-yellow-100 text-yellow-800' :
+                        app.status === 'Applied' ? 'bg-blue-100 text-blue-800' :
+                          'bg-red-100 text-red-800'
+                    }`}>
                     {app.status}
                   </span>
                 </td>
@@ -509,11 +751,10 @@ const TPODashboard = () => {
                 <td className="border border-gray-200 px-4 py-3 text-gray-700">{interview.mode}</td>
                 <td className="border border-gray-200 px-4 py-3 text-gray-700">{interview.panel}</td>
                 <td className="border border-gray-200 px-4 py-3">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    interview.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
-                    interview.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${interview.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
+                      interview.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                        'bg-red-100 text-red-800'
+                    }`}>
                     {interview.status}
                   </span>
                 </td>
@@ -523,7 +764,7 @@ const TPODashboard = () => {
                     {renderActionButton("Feedback", () => console.log(`Add feedback for ${interview.id}`), "bg-yellow-500 text-white")}
                     {renderActionButton("Cancel", () => console.log(`Cancel interview ${interview.id}`), "bg-red-500 text-white")}
                     {interview.mode === 'Online' && interview.meetingLink && (
-                        renderActionButton("Join", () => window.open(interview.meetingLink, '_blank'), "bg-teal-500 text-white", <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zm-2 2a1 1 0 00-1 1v3a1 1 0 001 1h2a1 1 0 001-1V9a1 1 0 00-1-1H9z" clipRule="evenodd" />)
+                      renderActionButton("Join", () => window.open(interview.meetingLink, '_blank'), "bg-teal-500 text-white", <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zm-2 2a1 1 0 00-1 1v3a1 1 0 001 1h2a1 1 0 001-1V9a1 1 0 00-1-1H9z" clipRule="evenodd" />)
                     )}
                   </div>
                 </td>
@@ -829,13 +1070,24 @@ const TPODashboard = () => {
   const renderActiveSection = () => {
     switch (activeSection) {
       case 'overview':
-        return renderOverview();
+        return <RenderOverview tpoData={tpoData}/>;
       case 'profile':
-        return renderProfileSection();
+        return <RenderProfile tpoData={tpoData}/>;
       case 'student-management':
-        return renderStudentManagement();
+        return <RenderStudentManagement tpoData={tpoData}/>;
       case 'company-hr-management':
-        return renderCompanyHRManagement();
+        return <RenderCompanyHrManagement 
+          renderTableHeader = {renderTableHeader} 
+          renderActionButton = {renderActionButton}
+          fetchHRsFromAPI = {fetchHRsFromAPI}
+          loadingHRs = {loadingHRs}
+          realHRs = {realHRs}
+          renderHRDetailModal = {renderHRDetailModal}
+          renderJobApprovalModal = {renderJobApprovalModal}
+          loadingHRDetails = {loadingHRDetails}
+          renderJobPostings = {renderJobPostings}
+          loadingJobApproval = {loadingJobApproval}
+        />;
       case 'job-postings':
         return renderJobPostings();
       case 'application-monitoring':
@@ -859,7 +1111,7 @@ const TPODashboard = () => {
     }
   };
 
-  const handelLogout=()=>{
+  const handelLogout = () => {
     localStorage.removeItem("tpoData");
     localStorage.removeItem("tpoToken");
 

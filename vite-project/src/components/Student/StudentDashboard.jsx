@@ -142,7 +142,7 @@ const StudentDashboard = () => {
         chatHistory.push({ role: "user", parts: [{ text: prompt }] });
 
         const payload = { contents: chatHistory };
-        const apiKey = ""; // Keep this empty, Canvas will inject the key at runtime
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY; // Keep this empty, Canvas will inject the key at runtime
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
         try {

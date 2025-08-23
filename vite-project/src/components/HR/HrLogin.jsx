@@ -141,6 +141,9 @@ const HrLogin = () => {
             const response = await axios.post("http://localhost:5100/hr/login", form);
             const data = response.data;
 
+            const hrId = data.data?.hr?._id;
+            // console.log("hrid", hrId);
+
             if (data.success) {
                 // Clear any existing authentication data first
                 clearAllAuthData();
@@ -154,7 +157,7 @@ const HrLogin = () => {
 
                 // Redirect to HR Dashboard after a short delay for user to see the modal
                 setTimeout(() => {
-                    navigate("/HRDashboard", { replace: true });
+                    navigate(`/HRDashboard/${hrId}`, { replace: true });
                 }, 1500);
 
                 console.log("HR logged in:", data.data.hr);

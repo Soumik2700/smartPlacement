@@ -10,18 +10,20 @@ import LandingPage from './components/LandingPage.jsx';
 import Register from './components/Register.jsx';
 import HeroSection from './components/HeroSection.jsx';
 import StudentDashboard from './components/Student/StudentDashboard.jsx';
-import HRDashboard from './components/Student/HRDashboard.jsx';
+import HRDashboard from './components/HR/HRDashboard.jsx';
 import StudentLogin from './components/Student/StudentLogin.jsx';
-import HrLogin from './components/Student/HrLogin.jsx';
-import TpoLogin from './components/Student/TpoLogin.jsx';
-import AdminLogin from './components/Student/AdminLogin.jsx';
-import AdminDashboard from './components/Student/AdminDashboard.jsx';
+import HrLogin from './components/HR/HrLogin.jsx';
+import TpoLogin from './components/TPO/TpoLogin.jsx';
+import AdminLogin from './components/Admin/AdminLogin.jsx';
+import AdminDashboard from './components/Admin/AdminDashboard.jsx';
 import TPODashboard from './components/TPO/TPODashboard.jsx';
+import ErrorPage from './components/ErrorPage.jsx';
 
 const appRouter = createBrowserRouter([
   {
     path: "/",
     element: <LandingPage />,
+    errorElement: <ErrorPage />,
     children: [
       {
         path: "",
@@ -45,7 +47,7 @@ const appRouter = createBrowserRouter([
         )
       },
       {
-        path: "/HRDashboard",
+        path: "/HRDashboard/:id",
         element: (
           <ProtectedRoute requiredRole="hr">
             <HRDashboard />

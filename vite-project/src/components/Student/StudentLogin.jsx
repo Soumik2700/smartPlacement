@@ -281,8 +281,8 @@ const StudentLogin = () => {
                 type="button"
                 onClick={() => {
                   setForm({
-                    email: "student@example.com",
-                    password: "password123"
+                    email: "vikash.singh@gmail.com",
+                    password: "MinimalPass123"
                   });
                 }}
                 className="mt-3 text-xs text-blue-600 hover:text-blue-800 underline font-medium"
